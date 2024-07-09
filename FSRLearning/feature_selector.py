@@ -6,11 +6,12 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import make_interp_spline
 from tqdm import tqdm
 
-from .state import State
-from .fsrlearning import FeatureSelectionProcess
+from FSRLearning.state import State
+from FSRLearning.fsrlearning import FeatureSelectionProcess
 
 from sklearn.feature_selection import RFE
 from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBRegressor
 from sklearn.model_selection import cross_val_score, cross_validate
 
 
@@ -47,6 +48,7 @@ class FeatureSelectorRL:
                  explored: int = 0,
                  not_explored: int = 0,
                  starting_state: str = 'empty'):
+        
         self.feature_number = feature_number
         self.nb_explored = nb_explored
         self.nb_not_explored = nb_not_explored
@@ -227,24 +229,29 @@ class FeatureSelectorRL:
         print('---------- Score ----------')
         for i in range(1, self.feature_number):
             # From RL
-            clf = RandomForestClassifier(n_jobs=-1)
+            # clf = RandomForestClassifier(n_jobs=-1)
+            clf = XGBRegressor(n_jobs=-1)
             df = pd.concat([X.iloc[:, results[-1][i:]], y], axis=1)
+            print(f'\nVariables : {results[-1][i:]}')
             df = df.drop_duplicates(ignore_index=True)
 
             min_samples = np.min(np.array(df.iloc[:, -1].value_counts()))
             if min_samples < 5 and min_samples >= 2:
-                accuracy: float = np.mean(
-                    cross_val_score(clf, df.iloc[:, :-1], df.iloc[:, -1], cv=min_samples, scoring='balanced_accuracy'))
+                accuracy: float = np.mean(cross_val_score(clf, df.iloc[:, :-1], df.iloc[:, -1], cv=min_samples, scoring='r2')).item()
+                # accuracy: float = np.mean(cross_val_score(clf, df.iloc[:, :-1], df.iloc[:, -1], cv=min_samples, scoring='balanced_accuracy')).item()
+                    
             elif min_samples < 2:
                 accuracy: float = 0
             else:
-                accuracy: float = np.mean(
-                    cross_val_score(clf, df.iloc[:, :-1], df.iloc[:, -1], cv=5, scoring='balanced_accuracy'))
+                accuracy: float = np.mean(cross_val_score(clf, df.iloc[:, :-1], df.iloc[:, -1], cv=5, scoring='r2')).item()
+                # accuracy: float = np.mean(cross_val_score(clf, df.iloc[:, :-1], df.iloc[:, -1], cv=5, scoring='balanced_accuracy')).item()
 
             # Benchmark
-            estimator = RandomForestClassifier(n_jobs=-1)
+            # estimator = RandomForestClassifier(n_jobs=-1)
+            estimator = XGBRegressor(n_jobs=-1)
             selector = RFE(estimator, n_features_to_select=len(results[-1]) - i, step=1)
-            cv_results = cross_validate(selector, X, y, cv=5, scoring='balanced_accuracy', return_estimator=True)
+            # cv_results = cross_validate(selector, X, y, cv=5, scoring='balanced_accuracy', return_estimator=True)
+            cv_results = cross_validate(selector, X, y, cv=5, scoring='r2', return_estimator=True)
             sele_acc = np.mean(cv_results['test_score'])
 
             if accuracy >= sele_acc:

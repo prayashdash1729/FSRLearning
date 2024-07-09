@@ -15,7 +15,7 @@ class State:
         v_value: V value of the state
         nb_visited: number of times that the set has been visited
     '''
-    def __init__(self, 
+    def __init__(self,
                  number: list,
                  description: list,
                  v_value: float,
@@ -41,7 +41,7 @@ class State:
             else:
                 # The state has never been visited and init the reward
                 df = pd.concat([X.iloc[:, self.description], y], axis = 1)
-                df = df.drop_duplicates(ignore_index = True) 
+                df = df.drop_duplicates(ignore_index = True)
 
                 if is_classifier(clf):
                     min_samples = np.min(np.array(df.iloc[:, -1].value_counts()))

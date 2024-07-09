@@ -1,4 +1,4 @@
-from .state import State
+from FSRLearning.state import State
 import numpy as np
 
 
